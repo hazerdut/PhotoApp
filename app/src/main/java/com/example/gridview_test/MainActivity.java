@@ -42,7 +42,7 @@ public class MainActivity extends AppCompatActivity {
             // start detail activity
             Intent intent = new Intent(MainActivity.this, DetailActivity.class);
             MyPhoto photo = (MyPhoto) adapterPhoto.getItem(position);
-            intent.putExtra("image", photo.getPath());
+            intent.putExtra("image", RetrofitClient.URL + photo.getPath());
             startActivity(intent);
         });
 
