@@ -5,12 +5,11 @@ import android.view.View;
 import android.view.ViewGroup;
 import android.widget.BaseAdapter;
 import android.widget.ImageView;
-import android.widget.TextView;
 
 import com.bumptech.glide.Glide;
 import com.example.gridview_test.R;
-import com.example.gridview_test.RetrofitClient;
 import com.example.gridview_test.model.MyPhoto;
+import com.example.gridview_test.service.RetrofitClient;
 
 import java.util.ArrayList;
 import java.util.List;

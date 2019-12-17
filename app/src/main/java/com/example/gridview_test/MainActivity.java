@@ -4,6 +4,7 @@ import android.content.Intent;
 import android.os.Bundle;
 import android.util.Log;
 import android.view.Menu;
+import android.view.MenuItem;
 import android.widget.GridView;
 import android.widget.ImageButton;
 
@@ -11,16 +12,17 @@ import androidx.appcompat.app.AppCompatActivity;
 
 import com.example.gridview_test.adapter.PhotoAdapter;
 import com.example.gridview_test.model.MyPhoto;
+import com.example.gridview_test.model.MyPhotoResponse;
+import com.example.gridview_test.service.RetrofitClient;
 
 import java.util.ArrayList;
-import java.util.List;
 
 import retrofit2.Call;
 import retrofit2.Callback;
 import retrofit2.Response;
 
 public class MainActivity extends AppCompatActivity {
-
+    private static final String TAG = MainActivity.class.getName();
     PhotoAdapter adapterPhoto = new PhotoAdapter(new ArrayList<MyPhoto>());
 
     @Override
@@ -43,6 +45,7 @@ public class MainActivity extends AppCompatActivity {
             Intent intent = new Intent(MainActivity.this, DetailActivity.class);
             MyPhoto photo = (MyPhoto) adapterPhoto.getItem(position);
             intent.putExtra("image", RetrofitClient.URL + photo.getPath());
+            intent.putExtra("path",photo.getPath());
             startActivity(intent);
         });
 
@@ -50,40 +53,24 @@ public class MainActivity extends AppCompatActivity {
             Intent intent = new Intent(MainActivity.this, AddActivity.class);
             startActivity(intent);
         });
-
-        RetrofitClient.getApi().getContacts().enqueue(new Callback<List<MyPhoto>>() {
-            @Override
-            public void onResponse(Call<List<MyPhoto>> call, Response<List<MyPhoto>> response) {
-                if (response.body() == null) {
-                    Log.d("@@@@@", "error null data");
-                } else {
-                    adapterPhoto.updateList(response.body());
-                }
-            }
-
-            @Override
-            public void onFailure(Call<List<MyPhoto>> call, Throwable t) {
-                Log.e("error__", "loi load anh");
-            }
-        });
     }
 
     @Override
     protected void onStart() {
         super.onStart();
-        RetrofitClient.getApi().getContacts().enqueue(new Callback<List<MyPhoto>>() {
+        RetrofitClient.getAPIService().getImages().enqueue(new Callback<MyPhotoResponse>() {
             @Override
-            public void onResponse(Call<List<MyPhoto>> call, Response<List<MyPhoto>> response) {
+            public void onResponse(Call<MyPhotoResponse> call, Response<MyPhotoResponse> response) {
                 if (response.body() == null) {
-                    Log.d("@@@@@", "error null data");
+                    Log.d(TAG, "response.body() == null");
                 } else {
-                    adapterPhoto.updateList(response.body());
+                    adapterPhoto.updateList(response.body().getData());
                 }
             }
 
             @Override
-            public void onFailure(Call<List<MyPhoto>> call, Throwable t) {
-                Log.e("error__", "loi load anh");
+            public void onFailure(Call<MyPhotoResponse> call, Throwable t) {
+                Log.e(TAG, "Could not load images. Error: " + t.getLocalizedMessage());
             }
         });
     }
@@ -92,5 +79,16 @@ public class MainActivity extends AppCompatActivity {
     public boolean onCreateOptionsMenu(Menu menu) {
         getMenuInflater().inflate(R.menu.menu_home, menu);
         return true;
+    }
+
+    public boolean onOptionsItemSelected(MenuItem item) {
+        switch (item.getItemId()) {
+
+            case R.id.menu_f5: {
+                    onStart();
+                    return true;
+                }
+            }
+        return false;
     }
 }

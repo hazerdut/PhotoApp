@@ -1,15 +1,9 @@
 package com.example.gridview_test;
 
 import android.Manifest;
-import android.content.Context;
 import android.content.Intent;
-import android.database.Cursor;
-import android.graphics.drawable.Drawable;
 import android.net.Uri;
-import android.os.Build;
 import android.os.Bundle;
-import android.os.FileUtils;
-import android.provider.MediaStore;
 import android.util.Log;
 import android.view.Menu;
 import android.view.MenuItem;
@@ -17,12 +11,13 @@ import android.widget.ImageView;
 import android.widget.Toast;
 
 import androidx.annotation.Nullable;
-import androidx.annotation.RequiresApi;
 import androidx.appcompat.app.AppCompatActivity;
-import androidx.loader.content.CursorLoader;
 
 import com.bumptech.glide.Glide;
+import com.example.gridview_test.Utils.UriUtil;
 import com.example.gridview_test.model.MyPhoto;
+import com.example.gridview_test.model.UploadResponse;
+import com.example.gridview_test.service.RetrofitClient;
 import com.karumi.dexter.Dexter;
 import com.karumi.dexter.MultiplePermissionsReport;
 import com.karumi.dexter.PermissionToken;
@@ -30,15 +25,7 @@ import com.karumi.dexter.listener.PermissionRequest;
 import com.karumi.dexter.listener.multi.MultiplePermissionsListener;
 
 import java.io.File;
-import java.net.URI;
-import java.net.URISyntaxException;
-import java.nio.file.Files;
-import java.nio.file.Path;
-import java.nio.file.Paths;
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
-import java.util.Objects;
 
 import okhttp3.MediaType;
 import okhttp3.MultipartBody;
@@ -49,8 +36,10 @@ import retrofit2.Response;
 
 
 public class AddActivity extends AppCompatActivity {
-    ImageView imageView;
-    MyPhoto myPhoto = null;
+    private static final String TAG = AddActivity.class.getName();
+    private ImageView imageView;
+    private Uri imageUri;
+    private String status;
 
     public static final int PERMISSION_PICK_IMAGE = 1000;
 
@@ -94,8 +83,8 @@ public class AddActivity extends AppCompatActivity {
         if (resultCode == RESULT_OK && requestCode == PERMISSION_PICK_IMAGE) {
             Uri uri = data != null ? data.getData() : null;
             assert uri != null;
-            myPhoto = new MyPhoto(uri.hashCode() + "", uri.toString(), 5);
-            Glide.with(this).load(uri).into(imageView);
+            imageUri = uri;
+            Glide.with(this).load(imageUri).into(imageView);
         }
     }
 
@@ -113,7 +102,7 @@ public class AddActivity extends AppCompatActivity {
                 return true;
             }
             case R.id.uploadImage: {
-                if (myPhoto != null) {
+                if (imageUri != null) {
                     uploadImageToSever();
                     return true;
                 }
@@ -122,28 +111,28 @@ public class AddActivity extends AppCompatActivity {
         return false;
     }
 
-    public String getRealPathFromURI(Uri uri) {
-        Cursor cursor = getContentResolver().query(uri, null, null, null, null);
-        cursor.moveToFirst();
-        int idx = cursor.getColumnIndex(MediaStore.Images.ImageColumns.DATA);
-        return cursor.getString(idx);
-    }
-
     private void uploadImageToSever() {
-        Toast.makeText(this, "toast aa", Toast.LENGTH_LONG).show();
-        File file = new File("file:///"+getRealPathFromURI(Uri.parse(myPhoto.getPath())));
-        RequestBody requestBody = RequestBody.create(MediaType.parse("image/*"), file);
-        MultipartBody.Part part = MultipartBody.Part.createFormData("singleimage",file.getName(), requestBody);
-        RetrofitClient.getApi().uploadImage(part).enqueue(new Callback<Void>() {
+        Log.d(TAG, UriUtil.getPathFromUri(this, imageUri));
+        File file = new File(UriUtil.getPathFromUri(this, imageUri));
+        RequestBody requestBody = RequestBody.create(MediaType.parse("multipart/form-data"), file);
+        MultipartBody.Part part = MultipartBody.Part.createFormData("file", file.getName(), requestBody);
+        RetrofitClient.getAPIService().uploadImage(part).enqueue(new Callback<UploadResponse>() {
             @Override
-            public void onResponse(Call<Void> call, Response<Void> response) {
-                Log.d("@@@@@@", "assadjsamd");
+            public void onResponse(Call<UploadResponse> call, Response<UploadResponse> response) {
+                Log.d(TAG, "Success to upload image to server.");
+                status = "Success to upload image to server.";
             }
 
             @Override
-            public void onFailure(Call<Void> call, Throwable t) {
-
+            public void onFailure(Call<UploadResponse> call, Throwable t) {
+                Log.e(TAG, "Failed to upload image to server. Error: " + t.getLocalizedMessage());
+                status = "Failed to upload image to server. Error: ";
             }
         });
+
+        Intent intent = new Intent(AddActivity.this, MainActivity.class);
+        Toast.makeText(this, "The image is uploading", Toast.LENGTH_LONG).show();
+        startActivity(intent);
+
     }
 }
